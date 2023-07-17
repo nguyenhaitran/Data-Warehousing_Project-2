@@ -1,0 +1,66 @@
+//Q1
+// How many crimes are recorded for a given crime type in a specified neighbourhood for a particular period?
+MATCH (c:Crime)-[:HAPPENED_ON]->(d:Date),
+    (c)-[:HAPPENED_AT]->(l:Location)
+WHERE c.crimeType = 'AUTO THEFT'
+    AND l.neighborhood = 'Downtown'
+    AND d.year > 2000
+    AND d.year < 2020
+RETURN count(c) AS CrimeCount
+
+// Q2
+// Find the neighbourhoods that share the same crime types, organise in decending 
+// order of the number of common crime types
+// crime types, organise in decending order of the number of common crime types
+MATCH (l1:Location)<-[:HAPPENED_AT]-(c1:Crime),
+    (l2:Location)<-[:HAPPENED_AT]-(c2:Crime)
+WHERE l1.neighborhood > l2.neighborhood
+WITH l1.neighborhood AS Neighborhood1, l2.neighborhood AS Neighborhood2,
+    COLLECT(DISTINCT c1.crimeType) AS CommonCrimeTypes1, COLLECT(DISTINCT c2.crimeType) AS CommonCrimeTypes2
+WHERE SIZE(CommonCrimeTypes1) = SIZE(CommonCrimeTypes2) 
+    AND SIZE([crimeType IN CommonCrimeTypes1 WHERE crimeType IN CommonCrimeTypes2]) = SIZE(CommonCrimeTypes1)  
+    AND SIZE([crimeType IN CommonCrimeTypes1 WHERE crimeType IN CommonCrimeTypes2]) = SIZE(CommonCrimeTypes2)
+RETURN DISTINCT Neighborhood1, Neighborhood2, SIZE(CommonCrimeTypes1) AS CommonCrimeTypesCount
+ORDER BY CommonCrimeTypesCount DESC
+
+// Q3
+// Return the top 5 neighbourhoods for a specified crime for a specified duration.
+MATCH (l:Location)<-[:HAPPENED_AT]-(c:Crime)-[:HAPPENED_ON]->(d:Date)
+WHERE d.year > 2010
+    AND d.year < 2020
+    AND c.crimeType = 'AUTO THEFT'
+WITH l.neighborhood AS TopNeighborhoods, COUNT(l.neighborhood) as NeighborCount
+RETURN TopNeighborhoods, NeighborCount
+ORDER BY NeighborCount DESC
+LIMIT 5
+
+// Q4
+// Find the types of crimes for each property type
+MATCH (c:Crime)-[:HAPPENED_IN]->(p:PropertyType)
+WITH p.propertyType AS PropertyType, COLLECT(c.crimeType) as CrimeTypes
+RETURN DISTINCT PropertyType, CrimeTypes
+
+// Q5
+// Which month of a specified year has the highest crime rate? Return one record each for each beat
+MATCH (c:Crime)-[:HAPPENED_ON]->(d:Date),
+      (c)-[:HAPPENED_IN]->(b:Beat)
+WHERE d.year = 2010
+WITH b, d.month as month, COUNT(c) AS CrimeCount
+ORDER BY b.beat, CrimeCount DESC
+WITH b, COLLECT({month: month, CrimeCount: CrimeCount})[0] AS HighestMonth
+RETURN b.beat AS beat, HighestMonth.month AS Month, HighestMonth.CrimeCount AS CrimeCount
+
+// Q6 (Additional Question 1)
+// What is the most common crime severity (High, Medium, Low) for each zone? 
+MATCH (c:Crime)-[:HAPPENED_IN]->(b:Beat)
+WITH b.zone AS zone, c.severity AS severity, count(*) AS frequency
+ORDER BY zone, frequency DESC
+RETURN zone, severity, frequency
+
+// Q7 (Additional Question 2)
+// Which crime nature (Property, Violent) has higher number of record for each 
+// property for each quater in a specific year?
+MATCH (d1:Date {year:2012})<-[:HAPPENED_ON]-(c1:Crime)-[:HAPPENED_IN]->(p1:PropertyType)
+WHERE c1.crimeNature IN ["Violent","Property"]
+RETURN d1.quarter AS quarter, p1.propertyType AS PropertyType , c1.crimeNature AS CrimeNature, COUNT(c1) AS NumberOfCrime
+ORDER BY quarter, PropertyType

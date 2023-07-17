@@ -1,0 +1,63 @@
+// Load 1000 random Crime nodes from the Crime.csv file
+LOAD CSV WITH HEADERS FROM 'file:///Crime.csv' AS row
+WITH row
+ORDER BY rand()
+LIMIT 1000
+CREATE (c:Crime {
+    cID: row.cID,
+    crimeType: row.crime_type,
+    severity: row.severity,
+    crimeNature: row.crime_nature})
+
+// Load PropertyType nodes from the Property.csv file
+LOAD CSV WITH HEADERS FROM 'file:///Property.csv' AS row
+CREATE (p:PropertyType {
+    pID: row.pID,
+    propertyType: row.type})
+
+// Load Beat nodes from the Beat.csv file
+LOAD CSV WITH HEADERS FROM 'file:///Beat.csv' AS row
+CREATE (b:Beat {
+    bID: row.bID,
+    beat: row.beat,
+    zone: row.zone})
+
+// Load Location nodes from the Location.csv file
+LOAD CSV WITH HEADERS FROM 'file:///Location.csv' AS row
+CREATE (l:Location {
+    lID: row.lID,
+    road: row.road,
+    neighborhood: row.neighborhood,
+    npu: row.npu})
+
+// Load Date nodes from the Date.csv file
+LOAD CSV WITH HEADERS FROM 'file:///Date.csv' AS row
+CREATE (d:Date {
+    dID: row.dID,
+    date: date(row.date),
+    month: toInteger(row.month),
+    quarter: toInteger(row.quarter),
+    year: toInteger(row.year)})
+
+
+// Create relationships between Crime nodes and other nodes
+
+LOAD CSV WITH HEADERS FROM 'file:///Crime_Property.csv' AS row
+MATCH (c:Crime {cID: row.cID})
+MATCH (p:PropertyType {pID: row.pID})
+CREATE (c)-[r:HAPPENED_IN]->(p)
+
+LOAD CSV WITH HEADERS FROM 'file:///Crime_Beat.csv' AS row
+MATCH (c:Crime {cID: row.cID})
+MATCH (b:Beat {bID: row.bID})
+CREATE (c)-[r:HAPPENED_IN]->(b)
+
+LOAD CSV WITH HEADERS FROM 'file:///Crime_Date.csv' AS row
+MATCH (c:Crime {cID: row.cID})
+MATCH (d:Date {dID: row.dID})
+CREATE (c)-[r:HAPPENED_ON]->(d)
+
+LOAD CSV WITH HEADERS FROM 'file:///Crime_Location.csv' AS row
+MATCH (c:Crime {cID: row.cID})
+MATCH (l:Location {lID: row.lID})
+CREATE (c)-[r:HAPPENED_AT]->(l)
